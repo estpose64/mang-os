@@ -10,15 +10,16 @@ mod vga_buffer;
 // don't mangle the name of this function
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
-    vga_buffer::print_stuff();
+    println!("Hello, World!");
+    println!("Fuck Microsoft!");
+    println!("Long Live Linux!");
 
     loop {}
 }
 
 /// This function is called on panic.
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
