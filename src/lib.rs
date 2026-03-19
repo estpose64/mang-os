@@ -1,35 +1,13 @@
-// src/main.rs
-
-#![no_std] // don't link the Rust standard library
-#![no_main] // don't link the Rust standard library
+#![no_std]
+#![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use mang_os::println;
 
-mod serial;
-mod vga_buffer;
-
-// don't mangle the name of this function
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
-    println!("Long Live Linux!");
-
-    #[cfg(test)]
-    test_main();
-
-    loop {}
-}
-
-/// This function is called on panic.
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
-    loop {}
-}
+pub mod serial;
+pub mod vga_buffer;
 
 pub trait Testable {
     fn run(&self) -> ();
@@ -46,7 +24,6 @@ where
     }
 }
 
-#[cfg(test)]
 pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
@@ -55,15 +32,25 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     exit_qemu(QemuExitCode::Success);
 }
 
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
+
+/// Entry point for `cargo test`
+#[cfg(test)]
+#[unsafe(no_mangle)]
+pub extern "C" fn _start() -> ! {
+    test_main();
+    loop {}
+}
+
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    mang_os::test_panic_handler(info)
-}
-
-#[test_case]
-fn trivial_assertion() {
-    assert_eq!(1, 1);
+    test_panic_handler(info)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
